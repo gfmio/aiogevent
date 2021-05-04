@@ -1,8 +1,11 @@
+import asyncio
+import sys
+import unittest
+
 import aiogevent
 import gevent
-import sys
-import tests
-from tests import asyncio
+
+from .test_case import TestCase
 
 
 SHORT_SLEEP = 0.001
@@ -16,77 +19,35 @@ def gevent_slow_error():
     gevent.sleep(SHORT_SLEEP)
     raise ValueError("error")
 
-try:
-    import asyncio
 
-    exec('''if 1:
-        @asyncio.coroutine
-        def coro_wrap_greenlet():
-            result = []
+async def coro_wrap_greenlet():
+    result = []
 
-            gt = gevent.spawn(gevent_slow_append, result, 1, 0.020)
-            value = yield from aiogevent.wrap_greenlet(gt)
-            result.append(value)
+    gt = gevent.spawn(gevent_slow_append, result, 1, 0.020)
+    value = await aiogevent.wrap_greenlet(gt)
+    result.append(value)
 
-            gt = gevent.spawn(gevent_slow_append, result, 2, 0.010)
-            value = yield from aiogevent.wrap_greenlet(gt)
-            result.append(value)
+    gt = gevent.spawn(gevent_slow_append, result, 2, 0.010)
+    value = await aiogevent.wrap_greenlet(gt)
+    result.append(value)
 
-            gt = gevent.spawn(gevent_slow_error)
-            try:
-                yield from aiogevent.wrap_greenlet(gt)
-            except ValueError as exc:
-                result.append(str(exc))
+    gt = gevent.spawn(gevent_slow_error)
+    try:
+        await aiogevent.wrap_greenlet(gt)
+    except ValueError as exc:
+        result.append(str(exc))
 
-            result.append(4)
-            return result
+    result.append(4)
+    return result
 
-        @asyncio.coroutine
-        def coro_slow_append(result, value, delay=SHORT_SLEEP):
-            yield from asyncio.sleep(delay)
-            result.append(value)
-            return value * 10
+async def coro_slow_append(result, value, delay=SHORT_SLEEP):
+    await asyncio.sleep(delay)
+    result.append(value)
+    return value * 10
 
-        @asyncio.coroutine
-        def coro_slow_error():
-            yield from asyncio.sleep(0.001)
-            raise ValueError("error")
-    ''')
-except ImportError:
-    import trollius as asyncio
-    from trollius import From, Return
-
-    @asyncio.coroutine
-    def coro_wrap_greenlet():
-        result = []
-
-        gt = gevent.spawn(gevent_slow_append, result, 1, 0.020)
-        value = yield From(aiogevent.wrap_greenlet(gt))
-        result.append(value)
-
-        gt = gevent.spawn(gevent_slow_append, result, 2, 0.010)
-        value = yield From(aiogevent.wrap_greenlet(gt))
-        result.append(value)
-
-        gt = gevent.spawn(gevent_slow_error)
-        try:
-            yield From(aiogevent.wrap_greenlet(gt))
-        except ValueError as exc:
-            result.append(str(exc))
-
-        result.append(4)
-        raise Return(result)
-
-    @asyncio.coroutine
-    def coro_slow_append(result, value, delay=SHORT_SLEEP):
-        yield From(asyncio.sleep(delay))
-        result.append(value)
-        raise Return(value * 10)
-
-    @asyncio.coroutine
-    def coro_slow_error():
-        yield From(asyncio.sleep(0.001))
-        raise ValueError("error")
+async def coro_slow_error():
+    await asyncio.sleep(0.001)
+    raise ValueError("error")
 
 
 def greenlet_yield_future(result, loop):
@@ -111,15 +72,15 @@ def greenlet_yield_future(result, loop):
 
 
 def ignore_stderr():
-    return tests.mock.patch.object(sys, 'stderr')
+    return mock.patch.object(sys, 'stderr')
 
 
-class GeventTests(tests.TestCase):
+class GeventTests(TestCase):
     def test_stop(self):
         def func():
             self.loop.stop()
 
-        gevent.spawn(func)
+        gevent.spawn(func).join()
         self.loop.run_forever()
 
     def test_soon(self):
@@ -129,7 +90,7 @@ class GeventTests(tests.TestCase):
             result.append("spawn")
             self.loop.stop()
 
-        gevent.spawn(func)
+        gevent.spawn(func).join()
         self.loop.run_forever()
         self.assertEqual(result, ["spawn"])
 
@@ -144,19 +105,18 @@ class GeventTests(tests.TestCase):
             self.loop.stop()
 
         def schedule_greenlet():
-            gevent.spawn(func1)
-            gevent.spawn_later(0.010, func2)
+            gevent.spawn(func1).join()
+            gevent.spawn_later(0.010, func2).join()
 
         self.loop.call_soon(schedule_greenlet)
         self.loop.run_forever()
         self.assertEqual(result, ["spawn", "spawn_later"])
 
 
-class LinkFutureTests(tests.TestCase):
+class LinkFutureTests(TestCase):
     def test_greenlet_yield_future(self):
         result = []
-        self.loop.call_soon(gevent.spawn,
-                            greenlet_yield_future, result, self.loop)
+        self.loop.call_soon(lambda: gevent.spawn(greenlet_yield_future, result, self.loop).join())
         self.loop.run_forever()
         self.assertEqual(result, [1, 10, 2, 20, 'error', 4])
 
@@ -169,7 +129,7 @@ class LinkFutureTests(tests.TestCase):
             self.loop.stop()
 
         fut = asyncio.Future(loop=self.loop)
-        gevent.spawn(func, fut)
+        gevent.spawn(func, fut).join()
         self.loop.run_forever()
         self.assertEqual(result, [3, 30])
 
@@ -184,7 +144,7 @@ class LinkFutureTests(tests.TestCase):
 
         event = gevent.event.Event()
         fut = asyncio.Future(loop=self.loop)
-        gevent.spawn(func, event, fut)
+        gevent.spawn(func, event, fut).join()
         event.wait()
 
         self.loop.call_soon(fut.set_result, 21)
@@ -213,15 +173,14 @@ class LinkFutureTests(tests.TestCase):
         def func(obj):
             return aiogevent.yield_future(obj)
 
-        @asyncio.coroutine
-        def coro_func():
+        async def coro_func():
             print("do something")
 
         def regular_func():
             return 3
 
         for obj in (coro_func, regular_func):
-            gt = gevent.spawn(func, coro_func)
+            gt = gevent.spawn(func, coro_func).join()
             # ignore logged traceback
             with ignore_stderr():
                 self.assertRaises(TypeError, gt.get)
@@ -248,7 +207,7 @@ class LinkFutureTests(tests.TestCase):
                          'loop argument must agree with Future')
 
 
-class WrapGreenletTests(tests.TestCase):
+class WrapGreenletTests(TestCase):
     def test_wrap_greenlet(self):
         def func():
             gevent.sleep(0.010)
@@ -256,6 +215,7 @@ class WrapGreenletTests(tests.TestCase):
 
         gt = gevent.spawn(func)
         fut = aiogevent.wrap_greenlet(gt)
+        gt.join()
         result = self.loop.run_until_complete(fut)
         self.assertEqual(result, 'ok')
 
@@ -266,7 +226,7 @@ class WrapGreenletTests(tests.TestCase):
             raise ValueError(7)
 
         # FIXME: the unit test must fail!?
-        with tests.mock.patch('traceback.print_exception') as print_exception:
+        with mock.patch('traceback.print_exception') as print_exception:
             gt = gevent.spawn(func)
             fut = aiogevent.wrap_greenlet(gt)
             self.assertRaises(ValueError, self.loop.run_until_complete, fut)
@@ -284,6 +244,7 @@ class WrapGreenletTests(tests.TestCase):
         msg = "wrap_greenlet: the greenlet is running"
         with ignore_stderr():
             self.assertRaisesRegex(RuntimeError, msg, gt.get)
+        gt.join()
 
     def test_wrap_greenlet_dead(self):
         def func():
@@ -306,8 +267,7 @@ class WrapGreenletTests(tests.TestCase):
             pass
         self.assertRaises(TypeError, aiogevent.wrap_greenlet, func)
 
-        @asyncio.coroutine
-        def coro_func():
+        async def coro_func():
             pass
         coro_obj = coro_func()
         self.addCleanup(coro_obj.close)
@@ -324,7 +284,7 @@ class WrapGreenletTests(tests.TestCase):
             self.assertRaises(AttributeError, gl.get)
 
 
-class WrapGreenletRawTests(tests.TestCase):
+class WrapGreenletRawTests(TestCase):
     def test_wrap_greenlet(self):
         def func():
             gevent.sleep(0.010)

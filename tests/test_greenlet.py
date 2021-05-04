@@ -1,9 +1,9 @@
 import aiogevent
 import greenlet
-import tests
+from .test_case import TestCase
 
 
-class WrapGreenletTests(tests.TestCase):
+class WrapGreenletTests(TestCase):
     def test_wrap_greenlet(self):
         def func(value):
             return value * 3
@@ -47,9 +47,3 @@ class WrapGreenletTests(tests.TestCase):
         msg = "wrap_greenlet: the greenlet already finished"
         self.assertRaisesRegexp(RuntimeError, msg,
                                 aiogevent.wrap_greenlet, gl)
-
-
-if __name__ == '__main__':
-    import unittest
-    unittest.main()
-
