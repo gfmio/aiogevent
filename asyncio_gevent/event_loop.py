@@ -10,8 +10,6 @@ class EventLoop(asyncio.SelectorEventLoop):
         self._greenlet = None
         selector = _Selector(self)
         super(EventLoop, self).__init__(selector=selector)
-        self.set_debug(True)
-        print(self.__dict__)
 
     def time(self):
         return gevent.core.time()
@@ -34,12 +32,10 @@ class EventLoop(asyncio.SelectorEventLoop):
 
     def run_forever(self):
         self._greenlet = gevent.getcurrent()
-        print(self._greenlet)
         try:
             super(EventLoop, self).run_forever()
         finally:
             self._greenlet = None
-    
-    def stop(self):
-        super().stop()
 
+    def _check_thread(self):
+        pass

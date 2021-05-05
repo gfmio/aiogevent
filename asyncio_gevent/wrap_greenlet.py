@@ -1,9 +1,12 @@
 import asyncio
+import threading
+from typing import Optional
 
 import gevent
+import greenlet
 
 
-def wrap_greenlet(gt, loop=None):
+def wrap_greenlet(gt: greenlet.greenlet, loop: Optional[asyncio.AbstractEventLoop] = None) -> asyncio.Future:
     """Wrap a greenlet into a Future object.
 
     The Future object waits for the completion of a greenlet. The result or the
@@ -18,55 +21,43 @@ def wrap_greenlet(gt, loop=None):
     For gevent.Greenlet, the _run attribute must be set. For greenlet.greenlet,
     the run attribute must be set.
     """
-    fut = asyncio.Future(loop=loop)
+    future = asyncio.Future(loop=loop)
 
     if not isinstance(gt, greenlet.greenlet):
-        raise TypeError("greenlet.greenlet or gevent.greenlet request, not %s"
-                        % type(gt))
+        raise TypeError("greenlet.greenlet or gevent.greenlet request, not %s" % type(gt))
 
     if gt.dead:
         raise RuntimeError("wrap_greenlet: the greenlet already finished")
+
+    def wrap_fn(fn):
+        def wrapped_fn(*args, **kw):
+            try:
+                result = fn(*args, **kw)
+            except Exception as exception:
+                future.set_exception(exception)
+            else:
+                future.set_result(result)
+        return wrapped_fn
 
     if isinstance(gt, gevent.Greenlet):
         # Don't use gevent.Greenlet.__bool__() because since gevent 1.0, a
         # greenlet is True if it already starts, and gevent.spawn() starts
         # the greenlet just after its creation.
-        if _PY3:
-            is_running = greenlet.greenlet.__bool__
-        else:
-            is_running = greenlet.greenlet.__nonzero__
+        is_running = greenlet.greenlet.__bool__
         if is_running(gt):
             raise RuntimeError("wrap_greenlet: the greenlet is running")
 
         try:
-            orig_func = gt._run
+            gt._run = wrap_fn(gt._run)
         except AttributeError:
-            raise RuntimeError("wrap_greenlet: the _run attribute "
-                               "of the greenlet is not set")
-        def wrap_func(*args, **kw):
-            try:
-                result = orig_func(*args, **kw)
-            except Exception as exc:
-                fut.set_exception(exc)
-            else:
-                fut.set_result(result)
-        gt._run = wrap_func
+            raise RuntimeError("wrap_greenlet: the _run attribute of the greenlet is not set")
     else:
         if gt:
             raise RuntimeError("wrap_greenlet: the greenlet is running")
 
         try:
-            orig_func = gt.run
+            gt.run = wrap_fn(gt.run)
         except AttributeError:
-            raise RuntimeError("wrap_greenlet: the run attribute "
-                               "of the greenlet is not set")
-        def wrap_func(*args, **kw):
-            try:
-                result = orig_func(*args, **kw)
-            except Exception as exc:
-                fut.set_exception(exc)
-            else:
-                fut.set_result(result)
-        gt.run = wrap_func
-    return fut
+            raise RuntimeError("wrap_greenlet: the run attribute of the greenlet is not set")
+    return future
 

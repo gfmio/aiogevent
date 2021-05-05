@@ -2,7 +2,6 @@ import asyncio
 import selectors
 import socket
 import sys
-import threading
 
 import gevent.core
 import gevent.event
@@ -115,7 +114,6 @@ class _Selector(_BaseSelectorImpl):
         events = self._read_events()
         if events:
             return events
-
         self._event = gevent.event.Event()
         try:
             if timeout is not None:
@@ -123,7 +121,7 @@ class _Selector(_BaseSelectorImpl):
                     self._event.set()
             else:
                 # blocking call
-                self._event.wait()
+                self._event.wait(0)
             return self._read_events()
         finally:
             self._event = None
