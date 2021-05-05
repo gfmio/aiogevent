@@ -6,7 +6,9 @@ import gevent
 import greenlet
 
 
-def wrap_greenlet(gt: greenlet.greenlet, loop: Optional[asyncio.AbstractEventLoop] = None) -> asyncio.Future:
+def wrap_greenlet(
+    gt: greenlet.greenlet, loop: Optional[asyncio.AbstractEventLoop] = None
+) -> asyncio.Future:
     """Wrap a greenlet into a Future object.
 
     The Future object waits for the completion of a greenlet. The result or the
@@ -24,7 +26,9 @@ def wrap_greenlet(gt: greenlet.greenlet, loop: Optional[asyncio.AbstractEventLoo
     future = asyncio.Future(loop=loop)
 
     if not isinstance(gt, greenlet.greenlet):
-        raise TypeError("greenlet.greenlet or gevent.greenlet request, not %s" % type(gt))
+        raise TypeError(
+            "greenlet.greenlet or gevent.greenlet request, not %s" % type(gt)
+        )
 
     if gt.dead:
         raise RuntimeError("wrap_greenlet: the greenlet already finished")
@@ -37,6 +41,7 @@ def wrap_greenlet(gt: greenlet.greenlet, loop: Optional[asyncio.AbstractEventLoo
                 future.set_exception(exception)
             else:
                 future.set_result(result)
+
         return wrapped_fn
 
     if isinstance(gt, gevent.Greenlet):
@@ -50,7 +55,9 @@ def wrap_greenlet(gt: greenlet.greenlet, loop: Optional[asyncio.AbstractEventLoo
         try:
             gt._run = wrap_fn(gt._run)
         except AttributeError:
-            raise RuntimeError("wrap_greenlet: the _run attribute of the greenlet is not set")
+            raise RuntimeError(
+                "wrap_greenlet: the _run attribute of the greenlet is not set"
+            )
     else:
         if gt:
             raise RuntimeError("wrap_greenlet: the greenlet is running")
@@ -58,6 +65,7 @@ def wrap_greenlet(gt: greenlet.greenlet, loop: Optional[asyncio.AbstractEventLoo
         try:
             gt.run = wrap_fn(gt.run)
         except AttributeError:
-            raise RuntimeError("wrap_greenlet: the run attribute of the greenlet is not set")
+            raise RuntimeError(
+                "wrap_greenlet: the run attribute of the greenlet is not set"
+            )
     return future
-

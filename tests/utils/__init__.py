@@ -30,10 +30,12 @@ class AsyncioOnGeventTestCase(unittest.TestCase):
 
 SHORT_SLEEP = 0.001
 
+
 def gevent_slow_append(result, value, delay):
     gevent.sleep(delay)
     result.append(value)
     return value * 10
+
 
 def gevent_slow_error():
     gevent.sleep(SHORT_SLEEP)
@@ -60,14 +62,17 @@ async def coro_wrap_greenlet():
     result.append(4)
     return result
 
+
 async def coro_slow_append(result, value, delay=SHORT_SLEEP):
     await asyncio.sleep(delay)
     result.append(value)
     return value * 10
 
+
 async def coro_slow_error():
     await asyncio.sleep(0.001)
     raise ValueError("error")
+
 
 def greenlet_yield_future(result, loop):
     try:

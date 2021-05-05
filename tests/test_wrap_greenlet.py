@@ -6,6 +6,7 @@ import pytest
 import asyncio_gevent
 
 from .utils import AsyncioOnGeventTestCase
+
 # from .utils import GeventOnAsyncioTestCase
 
 
@@ -58,8 +59,10 @@ class WrapGreenletTests:
         with pytest.raises(RuntimeError, match=msg):
             asyncio_gevent.wrap_greenlet(gl)
 
+
 class WrapGreenletAsyncioOnGeventTests(WrapGreenletTests, AsyncioOnGeventTestCase):
     pass
+
 
 # class WrapGreenletGeventOnAsyncioTests(WrapGreenletTests, GeventOnAsyncioTestCase):
 #     pass

@@ -1,12 +1,15 @@
 import gevent.monkey
+
 gevent.monkey.patch_all()
 import asyncio
+
 import asyncio_gevent
+
 policy = asyncio_gevent.EventLoopPolicy()
 asyncio.set_event_loop_policy(policy)
 
-import time
 import threading
+import time
 
 
 async def async_sleep():
@@ -38,8 +41,9 @@ async def main():
         async_sleep(),
         asyncio_gevent.wrap_greenlet(gevent.spawn(async_sleep_in_greenlet)),
         asyncio_gevent.wrap_greenlet(gevent.spawn(gevent_sleep)),
-        gevent_sleep_in_async()
+        gevent_sleep_in_async(),
     )
+
 
 if __name__ == "__main__":
     asyncio.run(main())

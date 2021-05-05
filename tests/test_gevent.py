@@ -3,11 +3,13 @@ import sys
 import unittest
 from unittest import mock
 
-import asyncio_gevent
 import gevent
 import pytest
 
+import asyncio_gevent
+
 from .utils import AsyncioOnGeventTestCase
+
 # from .utils import GeventOnAsyncioTestCase
 
 

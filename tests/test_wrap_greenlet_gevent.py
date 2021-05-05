@@ -6,20 +6,20 @@ import pytest
 
 import asyncio_gevent
 
-from .utils import AsyncioOnGeventTestCase
 # from .utils import GeventOnAsyncioTestCase
-from .utils import coro_wrap_greenlet
+from .utils import AsyncioOnGeventTestCase, coro_wrap_greenlet
+
 
 class WrapGreenletGeventTests:
     def test_wrap_greenlet(self):
         def func():
             gevent.sleep(0.010)
-            return 'ok'
+            return "ok"
 
         gt = gevent.spawn(func)
         fut = asyncio_gevent.wrap_greenlet(gt)
         result = self.loop.run_until_complete(fut)
-        self.assertEqual(result, 'ok')
+        self.assertEqual(result, "ok")
 
     def test_wrap_greenlet_exc(self):
         self.loop.set_debug(True)
@@ -45,11 +45,11 @@ class WrapGreenletGeventTests:
 
     def test_wrap_greenlet_dead(self):
         def func():
-            return 'ok'
+            return "ok"
 
         gt = gevent.spawn(func)
         result = gt.get()
-        self.assertEqual(result, 'ok')
+        self.assertEqual(result, "ok")
 
         msg = "wrap_greenlet: the greenlet already finished"
         with pytest.raises(RuntimeError, match=msg):
@@ -57,7 +57,7 @@ class WrapGreenletGeventTests:
 
     def test_coro_wrap_greenlet(self):
         result = self.loop.run_until_complete(coro_wrap_greenlet())
-        self.assertEqual(result, [1, 10, 2, 20, 'error', 4])
+        self.assertEqual(result, [1, 10, 2, 20, "error", 4])
 
     def test_wrap_invalid_type(self):
         def func():
@@ -68,6 +68,7 @@ class WrapGreenletGeventTests:
 
         async def coro_func():
             pass
+
         coro_obj = coro_func()
         self.addCleanup(coro_obj.close)
 
@@ -82,8 +83,12 @@ class WrapGreenletGeventTests:
         assert result == None
         assert gl.get() == None
 
-class WrapGreenletGeventAsyncioOnGeventTests(WrapGreenletGeventTests, AsyncioOnGeventTestCase):
+
+class WrapGreenletGeventAsyncioOnGeventTests(
+    WrapGreenletGeventTests, AsyncioOnGeventTestCase
+):
     pass
+
 
 # class WrapGreenletGeventGeventOnAsyncioTests(WrapGreenletGeventTests, GeventOnAsyncioTestCase):
 #     pass

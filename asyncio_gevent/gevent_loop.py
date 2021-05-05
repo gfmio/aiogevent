@@ -1,3 +1,6 @@
+import abc
+import sys
+
 from gevent._interfaces import ILoop
 from zope.interface import implementer
 
@@ -189,9 +192,6 @@ from zope.interface import implementer
 #            The :mod:`asyncio` equivalent.
 #         """
 
-import abc
-import sys
-
 
 READ = 1
 WRITE = 2
@@ -204,13 +204,14 @@ class MonkeyJail:
 
     def __enter__(self):
         from gevent import monkey
-        for key in list(monkey.saved) + ['selectors']:
+
+        for key in list(monkey.saved) + ["selectors"]:
             if key in sys.modules:
                 self.saved[key] = sys.modules.pop(key)
         sys.modules.update(_sys_modules)
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        for key in list(self.saved) + ['selectors']:
+        for key in list(self.saved) + ["selectors"]:
             if key in sys.modules:
                 _sys_modules[key] = sys.modules[key]
         sys.modules.update(self.saved)
@@ -251,14 +252,14 @@ class Watcher(RefMixin, metaclass=abc.ABCMeta):
     @callback.setter
     def callback(self, callback):
         if not callable(callback) and callback is not None:
-            raise TypeError("Expected callable, not %r" % (callback, ))
+            raise TypeError("Expected callable, not %r" % (callback,))
         self._callback = callback
 
     def start(self, callback, *args, **kwargs):
         if self.active:
             return
         if callback is None:
-                raise TypeError('callback must be callable, not None')
+            raise TypeError("callback must be callable, not None")
         self.callback = callback
         self.args = args
         self.active = self._start(**kwargs)
@@ -427,7 +428,9 @@ class Callback(RefMixin):
     def pending(self):
         return self.callback is not None
 
+
 __all__ = ["GeventLoop"]
+
 
 @implementer(ILoop)
 class GeventLoop:
@@ -436,6 +439,7 @@ class GeventLoop:
     def __init__(self, flags=None, default=None):
         with MonkeyJail():
             import asyncio
+
             self.policy = asyncio.get_event_loop_policy()
             self.aio = self.policy.get_event_loop()
         self.error_handler = None
@@ -473,8 +477,7 @@ class GeventLoop:
         if error_handler is not None:
             # we do want to do getattr every time so that setting
             # Hub.handle_error property just works
-            handle_error = getattr(
-                error_handler, 'handle_error', error_handler)
+            handle_error = getattr(error_handler, "handle_error", error_handler)
             handle_error(context, _type, value, tb)
         else:
             self.aio.default_exception_handler(context)

@@ -5,17 +5,17 @@ import pytest
 
 import asyncio_gevent
 
-from .utils import coro_slow_append
-from .utils import greenlet_yield_future
-from .utils import AsyncioOnGeventTestCase
+from .utils import AsyncioOnGeventTestCase, coro_slow_append, greenlet_yield_future
+
 # from .utils import GeventOnAsyncioTestCase
+
 
 class YieldFutureTests:
     def test_greenlet_yield_future(self):
         result = []
         gt = gevent.spawn(greenlet_yield_future, result, self.loop)
         self.loop.run_forever()
-        self.assertEqual(result, [1, 10, 2, 20, 'error', 4])
+        self.assertEqual(result, [1, 10, 2, 20, "error", 4])
 
     def test_link_coro(self):
         result = []
@@ -55,16 +55,16 @@ class YieldFutureTests:
             try:
                 value = asyncio_gevent.yield_future(fut)
             except Exception:
-                result.append('error')
+                result.append("error")
             else:
                 result.append(value)
             self.loop.stop()
 
         fut = asyncio.Future(loop=self.loop)
         self.loop.call_soon(func, fut)
-        self.loop.call_soon(fut.set_result, 'unused')
+        self.loop.call_soon(fut.set_result, "unused")
         self.loop.run_forever()
-        self.assertEqual(result, ['error'])
+        self.assertEqual(result, ["error"])
 
     def test_yield_future_invalid_type(self):
         def func(obj):
@@ -92,12 +92,14 @@ class YieldFutureTests:
             greenlet = asyncio_gevent.yield_future(fut, loop=loop2)
             greenlet.join()
 
-        msg = 'The future belongs to a different loop than the one specified as the loop argument'
+        msg = "The future belongs to a different loop than the one specified as the loop argument"
         with pytest.raises(ValueError, match=msg):
             self.loop.run_until_complete(func(future))
 
+
 class YieldFutureAsyncioOnGeventTests(YieldFutureTests, AsyncioOnGeventTestCase):
     pass
+
 
 # class YieldFutureGeventOnAsyncioTests(YieldFutureTests, GeventOnAsyncioTestCase):
 #     pass

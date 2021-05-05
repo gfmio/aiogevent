@@ -6,7 +6,9 @@ import pytest
 import asyncio_gevent
 
 from .utils import AsyncioOnGeventTestCase
+
 # from .utils import GeventOnAsyncioTestCase
+
 
 class WrapGreenletRawTests:
     def test_wrap_greenlet(self):
@@ -54,7 +56,9 @@ class WrapGreenletRawTests:
             asyncio_gevent.wrap_greenlet(gt)
 
 
-class WrapGreenletRawAsyncioOnGeventTests(WrapGreenletRawTests, AsyncioOnGeventTestCase):
+class WrapGreenletRawAsyncioOnGeventTests(
+    WrapGreenletRawTests, AsyncioOnGeventTestCase
+):
     pass
 
 

@@ -5,7 +5,9 @@ from typing import Optional
 import gevent
 
 
-def yield_future(future: asyncio.Future, loop: Optional[asyncio.AbstractEventLoop] = None) -> gevent.Greenlet:
+def yield_future(
+    future: asyncio.Future, loop: Optional[asyncio.AbstractEventLoop] = None
+) -> gevent.Greenlet:
     """Wait for a future, a task, or a coroutine object from a greenlet.
 
     Yield control other eligible greenlet until the future is done (finished
@@ -21,8 +23,10 @@ def yield_future(future: asyncio.Future, loop: Optional[asyncio.AbstractEventLoo
     future = asyncio.ensure_future(future, loop=loop)
 
     if future._loop._greenlet == gevent.getcurrent():
-        raise RuntimeError("yield_future() must not be called from "
-                           "the greenlet of the aiogreen event loop")
+        raise RuntimeError(
+            "yield_future() must not be called from "
+            "the greenlet of the aiogreen event loop"
+        )
 
     event = gevent.event.Event()
 

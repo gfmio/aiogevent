@@ -8,7 +8,7 @@ import gevent.event
 import gevent.hub
 import greenlet
 
-if sys.platform == 'win32':
+if sys.platform == "win32":
     from asyncio.windows_utils import socketpair
 else:
     socketpair = socket.socketpair
@@ -81,13 +81,17 @@ class _Selector(_BaseSelectorImpl):
             watcher.stop()
 
         if event == _EVENT_READ:
+
             def func():
                 self._notify(fd, _EVENT_READ)
+
             watcher = self._gevent_loop.io(fd, 1)
             watcher.start(func)
         else:
+
             def func():
                 self._notify(fd, _EVENT_WRITE)
+
             watcher = self._gevent_loop.io(fd, 2)
             watcher.start(func)
         event_dict[event] = watcher
@@ -125,4 +129,3 @@ class _Selector(_BaseSelectorImpl):
             return self._read_events()
         finally:
             self._event = None
-
